@@ -1,0 +1,18 @@
+{
+  "name": "notion-to-wordpress",
+  "version": "1.0.0",
+  "description": "Notion → WordPress 자동 발행 시스템",
+  "type": "module",
+  "scripts": {
+    "publish": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.15"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}

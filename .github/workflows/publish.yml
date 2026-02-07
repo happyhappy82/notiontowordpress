@@ -1,0 +1,33 @@
+name: Notion to WordPress Publisher
+
+on:
+  schedule:
+    - cron: '0 * * * *'    # 매시간
+  workflow_dispatch:         # 수동 트리거
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish Notion posts to WordPress
+        run: npx tsx src/index.ts
+        env:
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_BLOG_DB_ID: ${{ secrets.NOTION_BLOG_DB_ID }}
+          WP_URL: ${{ secrets.WP_URL }}
+          WP_USERNAME: ${{ secrets.WP_USERNAME }}
+          WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
