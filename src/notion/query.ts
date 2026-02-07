@@ -90,10 +90,6 @@ export async function queryPublishablePages(): Promise<NotionPage[]> {
           status: { equals: "Published" },
         },
         {
-          property: "WP 발행",
-          checkbox: { equals: true },
-        },
-        {
           property: "WP Post ID",
           number: { is_empty: true },
         },
