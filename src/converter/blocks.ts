@@ -24,8 +24,16 @@ function convertParagraph(block: NotionBlock, imageUrlMap: ImageUrlMap): string 
 function convertHeading(block: NotionBlock, level: 1 | 2 | 3): string {
   // h1 → h2, h2 → h3 (h1은 포스트 제목이므로 본문은 h2부터)
   const tag = level === 1 ? "h2" : level === 2 ? "h3" : "h4";
-  const html = richTextToHtml(getRichText(block));
-  return `<${tag}>${html}</${tag}>`;
+  const richText = getRichText(block);
+  const html = richTextToHtml(richText);
+  const plainText = richText.map((rt) => rt.plain_text).join("");
+  const id = plainText
+    .trim()
+    .replace(/[^\w\s가-힣ㄱ-ㅎㅏ-ㅣ-]/g, "")
+    .replace(/\s+/g, "-")
+    .toLowerCase()
+    .substring(0, 80);
+  return `<${tag} id="${id}">${html}</${tag}>`;
 }
 
 function convertBulletedList(blocks: NotionBlock[], imageUrlMap: ImageUrlMap): string {
@@ -74,7 +82,7 @@ function convertImage(block: NotionBlock, imageUrlMap: ImageUrlMap): string {
     ? `<figcaption style="text-align:center;color:#666;font-size:0.9em;margin-top:0.5rem;">${caption}</figcaption>`
     : "";
 
-  return `<figure ${STYLES.image.wrapper}><img src="${url}" alt="${caption || ""}" ${STYLES.image.img} />${captionHtml}</figure>`;
+  return `<figure ${STYLES.image.wrapper}><img src="${url}" alt="${caption || ""}" loading="lazy" ${STYLES.image.img} />${captionHtml}</figure>`;
 }
 
 function convertCode(block: NotionBlock): string {
@@ -119,7 +127,12 @@ function convertTable(block: NotionBlock): string {
     const cellStyle = isHeader ? STYLES.table.headerCell : STYLES.table.cell;
 
     const cellsHtml = cells
-      .map((cell) => `<${cellTag} ${cellStyle}>${richTextToHtml(cell)}</${cellTag}>`)
+      .map((cell, cellIdx) => {
+        const style = cellIdx === 0
+          ? (isHeader ? STYLES.table.headerFirstCell : STYLES.table.firstCell)
+          : cellStyle;
+        return `<${cellTag} ${style}>${richTextToHtml(cell)}</${cellTag}>`;
+      })
       .join("");
 
     return `<tr${rowStyle}>${cellsHtml}</tr>`;

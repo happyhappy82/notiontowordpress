@@ -10,7 +10,9 @@ export const STYLES = {
     table: 'style="border-collapse:collapse;border:1px solid #ddd;max-width:100%;width:100%;margin:1rem 0;"',
     headerRow: 'style="background-color:#e2fffb;"',
     headerCell: 'style="border:1px solid #ddd;padding:8px 12px;font-weight:bold;text-align:left;"',
+    headerFirstCell: 'style="border:1px solid #ddd;padding:8px 12px;font-weight:bold;text-align:left;white-space:nowrap;"',
     cell: 'style="border:1px solid #ddd;padding:8px 12px;text-align:left;"',
+    firstCell: 'style="border:1px solid #ddd;padding:8px 12px;text-align:left;white-space:nowrap;"',
   },
 
   callout: {

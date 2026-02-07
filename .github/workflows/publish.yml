@@ -4,7 +4,7 @@ on:
   repository_dispatch:
     types: [notion-webhook]   # Make 웹훅에서 트리거
   schedule:
-    - cron: '0 * * * *'      # 매시간
+    - cron: '0 4,9 * * *'    # 매일 오후 1시, 6시 KST (UTC 4시, 9시)
   workflow_dispatch:           # 수동 트리거
 
 jobs:
@@ -33,3 +33,5 @@ jobs:
           WP_URL: ${{ secrets.WP_URL }}
           WP_USERNAME: ${{ secrets.WP_USERNAME }}
           WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+          PUBLISH_MODE: ${{ github.event_name == 'repository_dispatch' && 'webhook' || 'scheduled' }}
+          NOTION_PAGE_ID: ${{ github.event.client_payload.page_id || '' }}

@@ -102,3 +102,44 @@ export async function queryPublishablePages(): Promise<NotionPage[]> {
   logger.info(`Found ${pages.length} pages to publish`);
   return pages;
 }
+
+export async function queryScheduledPages(): Promise<NotionPage[]> {
+  const notion = getNotionClient();
+  const dbId = getNotionBlogDbId();
+  const today = new Date().toISOString().split("T")[0];
+
+  logger.info("Querying Notion DB for scheduled pages", { dbId, today });
+
+  const response = await notion.databases.query({
+    database_id: dbId,
+    filter: {
+      and: [
+        {
+          property: "Status",
+          status: { equals: "Published" },
+        },
+        {
+          property: "WP Post ID",
+          number: { is_empty: true },
+        },
+        {
+          property: "Date",
+          date: { on_or_before: today },
+        },
+      ],
+    },
+    sorts: [{ property: "Date", direction: "ascending" }],
+    page_size: 1,
+  });
+
+  const pages = response.results as unknown as NotionPage[];
+  logger.info(`Found ${pages.length} scheduled pages`);
+  return pages;
+}
+
+export async function fetchPageById(pageId: string): Promise<NotionPage> {
+  const notion = getNotionClient();
+  logger.info("Fetching Notion page", { pageId });
+  const page = await notion.pages.retrieve({ page_id: pageId });
+  return page as unknown as NotionPage;
+}

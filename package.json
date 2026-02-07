@@ -4,7 +4,7 @@
   "description": "Notion → WordPress 자동 발행 시스템",
   "type": "module",
   "scripts": {
-    "publish": "tsx src/index.ts",
+    "publish": "node --env-file=.env node_modules/.bin/tsx src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
