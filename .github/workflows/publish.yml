@@ -1,9 +1,11 @@
 name: Notion to WordPress Publisher
 
 on:
+  repository_dispatch:
+    types: [notion-webhook]   # Make 웹훅에서 트리거
   schedule:
-    - cron: '0 * * * *'    # 매시간
-  workflow_dispatch:         # 수동 트리거
+    - cron: '0 * * * *'      # 매시간
+  workflow_dispatch:           # 수동 트리거
 
 jobs:
   publish:
