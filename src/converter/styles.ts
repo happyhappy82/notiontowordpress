@@ -34,9 +34,9 @@ export const STYLES = {
   },
 
   toggle: {
-    details: 'style="margin:1rem 0;border:1px solid #ddd;border-radius:8px;overflow:hidden;"',
-    summary: 'style="padding:12px 16px;cursor:pointer;font-weight:bold;background-color:#f5f5f5;"',
-    content: 'style="padding:12px 16px;"',
+    details: 'style="margin:1rem 0;border:1px solid #ddd;border-radius:8px;overflow:hidden;color:#111;"',
+    summary: 'style="padding:12px 16px;cursor:pointer;font-weight:bold;background-color:#f5f5f5;color:#111;"',
+    content: 'style="padding:12px 16px;color:#111;"',
   },
 
   bookmark: {
