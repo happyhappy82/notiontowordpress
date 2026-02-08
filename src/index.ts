@@ -10,7 +10,7 @@ import { fetchAllBlocks } from "./notion/blocks.js";
 import { updateWpPostId } from "./notion/update.js";
 import { convertBlocksToHtml, extractPlainText, extractFaqItems } from "./converter/index.js";
 import { processImages, uploadCoverImage } from "./images/pipeline.js";
-import { createPost, updatePost, deletePost, findPostByPageId } from "./wordpress/posts.js";
+import { createPost } from "./wordpress/posts.js";
 import { resolveCategoryFromTags, resolveTags } from "./wordpress/taxonomy.js";
 import { logger } from "./utils/logger.js";
 
@@ -23,7 +23,7 @@ function slugify(text: string): string {
     .substring(0, 80);
 }
 
-async function publishPage(page: NotionPage, existingWpPostId?: number): Promise<void> {
+async function publishPage(page: NotionPage): Promise<void> {
   const title = getPropertyValue(page, "Title") || getPropertyValue(page, "Name");
   const slug = getPropertyValue(page, "Slug") || slugify(title);
   const excerpt = getPropertyValue(page, "Excerpt") || "";
@@ -31,7 +31,7 @@ async function publishPage(page: NotionPage, existingWpPostId?: number): Promise
   const tags = getMultiSelectValues(page, "Tags");
   const coverUrl = getPropertyValue(page, "대표 이미지") || getCoverImage(page);
 
-  logger.info(`${existingWpPostId ? "Updating" : "Publishing"}: "${title}"`, { pageId: page.id, slug, tags });
+  logger.info(`Publishing: "${title}"`, { pageId: page.id, slug, tags });
 
   // 1. Fetch all blocks recursively
   logger.info("Fetching page blocks...");
@@ -75,10 +75,10 @@ async function publishPage(page: NotionPage, existingWpPostId?: number): Promise
   const categoryId = await resolveCategoryFromTags(tags);
   const tagIds = await resolveTags(tags);
 
-  // 6. Create or update WP post
-  const postParams = {
+  // 6. Create WP post (항상 신규 발행)
+  const post = await createPost({
     title,
-    slug: existingWpPostId ? undefined : slug,
+    slug,
     content: html,
     status: "publish" as const,
     categories: [categoryId],
@@ -87,16 +87,12 @@ async function publishPage(page: NotionPage, existingWpPostId?: number): Promise
     excerpt: finalExcerpt || undefined,
     date: date || undefined,
     meta,
-  };
-
-  const post = existingWpPostId
-    ? await updatePost(existingWpPostId, postParams)
-    : await createPost(postParams);
+  });
 
   // 7. Update Notion with WP Post ID
   await updateWpPostId(page.id, post.id);
 
-  logger.info(`Successfully ${existingWpPostId ? "updated" : "published"}: "${title}"`, {
+  logger.info(`Successfully published: "${title}"`, {
     wpPostId: post.id,
     wpLink: post.link,
   });
@@ -112,16 +108,6 @@ async function handleScheduled(): Promise<void> {
 
   // 1회 실행에 1개만 발행
   const page = pages[0];
-  const title = getPropertyValue(page, "Title") || getPropertyValue(page, "Name");
-
-  // page_id 중복 체크
-  const existing = await findPostByPageId(page.id);
-  if (existing) {
-    logger.info(`Duplicate found, skipping: "${title}"`, { wpPostId: existing.id, pageId: page.id });
-    await updateWpPostId(page.id, existing.id);
-    return;
-  }
-
   await publishPage(page);
 }
 
@@ -134,33 +120,15 @@ async function handleWebhook(notionPageId: string): Promise<void> {
 
   logger.info(`Page status: "${status}"`, { title, pageId: notionPageId });
 
-  // Deleted → WP에서 삭제
-  if (status === "Deleted") {
-    const existing = await findPostByPageId(notionPageId);
-    if (existing) {
-      await deletePost(existing.id);
-      logger.info(`Deleted from WP: "${title}"`, { wpPostId: existing.id });
-    } else {
-      logger.info(`No WP post found to delete: "${title}"`);
-    }
-    return;
-  }
-
   // Published가 아니면 무시
   if (status !== "Published") {
     logger.info(`Skipping non-published status: "${status}"`, { title });
     return;
   }
 
-  // Published → 중복 체크 후 생성 또는 덮어쓰기
-  const existing = await findPostByPageId(notionPageId);
-  if (existing) {
-    logger.info(`Updating existing WP post: "${title}"`, { wpPostId: existing.id });
-    await publishPage(page, existing.id);
-  } else {
-    logger.info(`Creating new WP post: "${title}"`);
-    await publishPage(page);
-  }
+  // 항상 신규 발행
+  logger.info(`Creating new WP post: "${title}"`);
+  await publishPage(page);
 }
 
 async function main(): Promise<void> {
