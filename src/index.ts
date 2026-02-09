@@ -14,6 +14,17 @@ import { createPost } from "./wordpress/posts.js";
 import { resolveCategoryFromTags, resolveTags } from "./wordpress/taxonomy.js";
 import { logger } from "./utils/logger.js";
 
+function normalizeDate(dateStr: string): string | undefined {
+  if (!dateStr) return undefined;
+  if (isNaN(new Date(dateStr).getTime())) return undefined;
+  // Notion date-only "2026-02-09" → WP requires "2026-02-09T00:00:00"
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr + "T00:00:00";
+  }
+  // Notion datetime "2026-02-09T10:00:00.000+09:00" → strip ms/tz for WP
+  return dateStr.replace(/\.\d{3}/, "").replace(/[+-]\d{2}:\d{2}$/, "");
+}
+
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -85,7 +96,7 @@ async function publishPage(page: NotionPage): Promise<void> {
     tags: tagIds,
     featured_media: featuredMediaId || undefined,
     excerpt: finalExcerpt || undefined,
-    date: date || undefined,
+    date: normalizeDate(date),
     meta,
   });
 
