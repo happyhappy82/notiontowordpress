@@ -36,6 +36,19 @@ function getBlockPlainText(block: NotionBlock): string {
   return richText?.map((rt) => rt.plain_text).join("") || "";
 }
 
+function getChildrenPlainText(blocks: NotionBlock[]): string {
+  const parts: string[] = [];
+  for (const block of blocks) {
+    const text = getBlockPlainText(block);
+    if (text) parts.push(text);
+    if (block.children) {
+      const childText = getChildrenPlainText(block.children);
+      if (childText) parts.push(childText);
+    }
+  }
+  return parts.join(" ").trim();
+}
+
 export function extractFaqItems(blocks: NotionBlock[]): FaqItem[] {
   const items: FaqItem[] = [];
 
@@ -57,7 +70,6 @@ export function extractFaqItems(blocks: NotionBlock[]): FaqItem[] {
 
   if (faqStartIndex === -1) return items;
 
-  // 질문 헤딩은 FAQ 헤딩보다 한 단계 아래
   const faqLevel = parseInt(faqHeadingType.replace("heading_", ""));
   const questionType = `heading_${Math.min(faqLevel + 1, 3)}`;
 
@@ -71,6 +83,28 @@ export function extractFaqItems(blocks: NotionBlock[]): FaqItem[] {
     if (block.type.startsWith("heading_")) {
       const blockLevel = parseInt(block.type.replace("heading_", ""));
       if (blockLevel <= faqLevel) break;
+    }
+
+    // 토글 블록 → summary = 질문, children = 답변
+    if (block.type === "toggle") {
+      // 이전 Q&A 저장
+      if (currentQuestion && answerParts.length > 0) {
+        items.push({
+          question: currentQuestion.replace(/^Q\d+[\.\s:)\-]+\s*/i, ""),
+          answer: answerParts.join(" ").trim(),
+        });
+        currentQuestion = "";
+        answerParts = [];
+      }
+      const question = getBlockPlainText(block);
+      const answer = block.children ? getChildrenPlainText(block.children) : "";
+      if (question && answer) {
+        items.push({
+          question: question.replace(/^Q\d+[\.\s:)\-]+\s*/i, ""),
+          answer: answer.replace(/^A[\.\s:)\-]+\s*/i, "").trim(),
+        });
+      }
+      continue;
     }
 
     if (block.type === questionType) {
