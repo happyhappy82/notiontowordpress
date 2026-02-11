@@ -4,6 +4,14 @@ import { STYLES } from "./styles.js";
 
 type ImageUrlMap = Map<string, string>;
 
+function escapeAttr(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function getRichText(block: NotionBlock): RichTextItem[] {
   const data = block[block.type] as Record<string, unknown> | undefined;
   return (data?.rich_text as RichTextItem[]) || [];
@@ -77,12 +85,12 @@ function convertImage(block: NotionBlock, imageUrlMap: ImageUrlMap): string {
 
   const originalUrl = data.type === "file" ? data.file?.url || "" : data.external?.url || "";
   const url = imageUrlMap.get(originalUrl) || originalUrl;
-  const caption = data.caption ? richTextToHtml(data.caption) : "";
-  const captionHtml = caption
-    ? `<figcaption style="text-align:center;color:#666;font-size:0.9em;margin-top:0.5rem;">${caption}</figcaption>`
+  const altText = data.caption?.map((rt) => rt.plain_text).join("") || "";
+  const captionHtml = altText
+    ? `<figcaption style="text-align:center;color:#666;font-size:0.9em;margin-top:0.5rem;">${richTextToHtml(data.caption!)}</figcaption>`
     : "";
 
-  return `<figure ${STYLES.image.wrapper}><img src="${url}" alt="${caption || ""}" loading="lazy" ${STYLES.image.img} />${captionHtml}</figure>`;
+  return `<figure ${STYLES.image.wrapper}><img src="${url}" alt="${escapeAttr(altText)}" loading="lazy" ${STYLES.image.img} />${captionHtml}</figure>`;
 }
 
 function convertCode(block: NotionBlock): string {

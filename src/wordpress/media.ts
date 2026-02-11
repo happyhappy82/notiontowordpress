@@ -1,4 +1,4 @@
-import { wpUpload } from "./client.js";
+import { wpUpload, wpFetch } from "./client.js";
 import { logger } from "../utils/logger.js";
 import { withRetry } from "../utils/retry.js";
 
@@ -35,7 +35,8 @@ function guessExtension(url: string, contentType: string): string {
 
 export async function uploadImageToWp(
   imageUrl: string,
-  filenameHint?: string
+  filenameHint?: string,
+  altText?: string
 ): Promise<WpMedia> {
   logger.info("Downloading image for WP upload", { imageUrl: imageUrl.substring(0, 100) });
 
@@ -60,9 +61,27 @@ export async function uploadImageToWp(
   logger.info("Uploading image to WP", { filename, size: imageBuffer.size });
 
   const result = await wpUpload("/media", imageBuffer, filename, contentType);
+  const mediaId = result.id as number;
+
+  // Set alt_text on WP media object
+  if (altText) {
+    try {
+      await wpFetch(`/media/${mediaId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alt_text: altText }),
+      });
+      logger.info("Alt text set on media", { mediaId, altText });
+    } catch (error) {
+      logger.warn("Failed to set alt_text on media", {
+        mediaId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   return {
-    id: result.id as number,
+    id: mediaId,
     source_url: result.source_url as string,
   };
 }
