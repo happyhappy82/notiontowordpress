@@ -59,8 +59,11 @@ async function publishPage(page: NotionPage): Promise<void> {
   // 3.5. Excerpt가 없으면 본문에서 자동 추출
   const finalExcerpt = excerpt || extractPlainText(blocks, 160);
 
-  // 3.6. Meta: page_id 저장 + FAQ 스키마
+  // 3.6. Meta: page_id 저장
   const meta: Record<string, string> = { _notion_page_id: page.id };
+
+  // 3.7. FAQ Schema JSON-LD → HTML 콘텐츠에 직접 삽입
+  let finalHtml = html;
   const faqItems = extractFaqItems(blocks);
   if (faqItems.length > 0) {
     const faqSchema = {
@@ -75,8 +78,8 @@ async function publishPage(page: NotionPage): Promise<void> {
         },
       })),
     };
-    meta._faq_schema_json = JSON.stringify(faqSchema);
-    logger.info("FAQ schema generated", { questions: faqItems.length });
+    finalHtml += `\n<script type="application/ld+json">${JSON.stringify(faqSchema)}</script>`;
+    logger.info("FAQ schema injected into HTML", { questions: faqItems.length });
   }
 
   // 4. Upload cover image
@@ -90,7 +93,7 @@ async function publishPage(page: NotionPage): Promise<void> {
   const post = await createPost({
     title,
     slug,
-    content: html,
+    content: finalHtml,
     status: "publish" as const,
     categories: [categoryId],
     tags: tagIds,
