@@ -8,10 +8,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@notionhq/client": "^2.2.15"
+    "@notionhq/client": "^2.2.15",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/sharp": "^0.31.1",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0"
   }

@@ -1,6 +1,7 @@
 import { wpUpload, wpFetch } from "./client.js";
 import { logger } from "../utils/logger.js";
 import { withRetry } from "../utils/retry.js";
+import { compressImage } from "../images/compress.js";
 
 interface WpMedia {
   id: number;
@@ -40,27 +41,35 @@ export async function uploadImageToWp(
 ): Promise<WpMedia> {
   logger.info("Downloading image for WP upload", { imageUrl: imageUrl.substring(0, 100) });
 
-  const imageBuffer = await withRetry(
+  const rawBuffer = await withRetry(
     async () => {
       const response = await fetch(imageUrl);
       if (!response.ok) {
         throw new Error(`Failed to download image: ${response.status}`);
       }
-      const buf = await response.arrayBuffer();
-      return new Blob([buf]);
+      return Buffer.from(await response.arrayBuffer());
     },
     { label: "download image" }
   );
 
-  const contentType = guessContentType(imageUrl);
+  const originalContentType = guessContentType(imageUrl);
+
+  // Compress image to fit under 1MB
+  const { buffer: compressedBuffer, contentType } = await compressImage(
+    rawBuffer,
+    originalContentType
+  );
+
   const ext = guessExtension(imageUrl, contentType);
   const filename = filenameHint
     ? `${filenameHint}.${ext}`
     : `notion-image-${Date.now()}.${ext}`;
 
-  logger.info("Uploading image to WP", { filename, size: imageBuffer.size });
+  const imageBlob = new Blob([new Uint8Array(compressedBuffer)]);
 
-  const result = await wpUpload("/media", imageBuffer, filename, contentType);
+  logger.info("Uploading image to WP", { filename, size: imageBlob.size });
+
+  const result = await wpUpload("/media", imageBlob, filename, contentType);
   const mediaId = result.id as number;
 
   // Set alt_text on WP media object
